@@ -1,0 +1,32 @@
+---
+- hosts: all
+  become: true
+  
+  vars:
+    username: newuser
+    password: "mypassword" # replace with a strong password
+    
+  tasks:
+    - name: Create new user
+      user:
+        name: "{{ username }}"
+        password: "{{ password | password_hash('sha512') }}"
+        shell: /bin/bash
+        createhome: yes
+        group: users
+    
+    - name: Set dummy password
+      command: echo "{{ username }}:{{ password }}" | chpasswd
+    
+    - name: Ensure SSH is enabled for the new user
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^AllowUsers.*"
+        line: "AllowUsers {{ username }}"
+        state: present
+        backup: yes
+    
+    - name: Reload SSH configuration
+      service:
+        name: sshd
+        state: reloaded
